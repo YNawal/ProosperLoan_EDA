@@ -18,5 +18,7 @@ Exploratory Data Analysis (EDA) is the numerical and graphical examination of da
 # Files description
 
 ./data/ contains zip floder of Prosper loan dataset I have used in this work.
+
 ./projecttemplate.rmd is a markdown file containig all R code used to completing this work
+
 ./projecttemplate.html is an html version of this work.
