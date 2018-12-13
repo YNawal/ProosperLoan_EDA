@@ -1,0 +1,921 @@
+
+
+Prosper Loan Data Analysis by YALA Nawal
+========================================================
+
+
+
+<div style="text-align: justify;">  
+
+# Introduction
+
+I chose Prosper Loan dataset because it describes a new area (financial area) for me and therefore I will learn new things other that I will learn by dealing the red/white wine datasets (datasets seen before in term 1). Prosper marketplace is one of the first Peer-to-peer lending sites. It bring borrowers together on the same website with their loans. It is basically removing the middleman, which is the bank, and creates a mutually beneficial financial arrangement. 
+Prosperdataset contains a large number of variables. The best way to  understand them is by describing how a loan process works. Applying for a loan looks something like [this](https://www.goodfinancialcents.com/prosper-loans/):
+
+* Create your loan listing - you provide basic information, then Prosper will obtain your credit score (**ProsperScore**) and determine your **BorrowerRate** and **terms**.
+* Based on your credit score (**ProsperScore**) and other information Prosper will obtain, you will be assigned a risk score (**ProsperRating**), from A to HR.
+* You then create a loan listing which is your request for a loan. You will add a description of your loan purpose and financial situation. It will appear on the platform to be reviewed by investors.
+* Once the loan listing is fully funded and your information has passed Prosper's verification process (EmploymentStatus, * EmploymentStatusDuration, IsBorrowerHomeowner ect), you will receive your loan.
+* The listing will stay active for 14 days, or until the loan funds.
+* Loan funds are deposited directly into your bank account within days.
+* You begin making your monthly payments.
+
+My analysis is limited to the following variables: 
+
+* ListingCreationDate:	The date the listing was created.
+* Term:	The length of the loan expressed in months.
+* LoanStatus:	The current status of the loan: Cancelled, Chargedoff, Completed, Current, Defaulted,   FinalPaymentInProgress, PastDue. The PastDue status will be accompanied by a delinquency bucket.
+* ClosedDate:	Closed date is applicable for Cancelled, Completed, Chargedoff and Defaulted loan       statuses.
+* BorrowerRate:	The Borrower's interest rate for this loan.
+* ProsperRating..Alpha.:	The Prosper Rating assigned at the time the listing was created between AA   HR. Applicable for loans originated after July 2009.
+* ProsperScore:	A custom risk score built using historical Prosper data. The score ranges from 1-10,   with 10 being the best, or lowest risk score.
+*istingCategory	: he category of the listing that the borrower selected when posting their listing
+* Occupation:	The Occupation selected by the Borrower at the time they created the listing.
+* EmploymentStatus:	The employment status of the borrower at the time they posted the listing.
+* EmploymentStatusDuration:	The length in months of the employment status at the time the listing     was created.
+* IsBorrowerHomeowner:	A Borrower will be classified as a homowner if they have a mortgage on their    credit profile or provide documentation confirming they are a homeowner.
+* DebtToIncomeRatio:	The debt to income ratio of the borrower at the time the credit profile was       pulled. This value is Null if the debt to income ratio is not available. This value is capped at    10.01 (any debt to income ratio larger than 1000% will be returned as 1001%).
+* IncomeVerifiable:	The borrower indicated they have the required documentation to support their      income.
+* LoanOriginalAmount:	The origination amount of the loan.
+* LoanOriginationDate:	The date the loan was originated.
+* LoanOriginationQuarter:	The quarter in which the loan was originated.
+* Investors:	The number of investors that funded the loan.
+* MonthlyLoanPayment:	The scheduled monthly loan payment.
+
+
+
+# Univariate Plots Section
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(lubridate)
+library(tidyr)
+setwd('E:/NanoDegree/EDA project')
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+loan = read.csv('prosperLoanData.csv')
+```
+
+Let's get an overview on the dataset and its structure
+
+```{r echo=FALSE}
+str(loan)
+```
+
+Prosper loan dataset consists of 113937 observations and 81 variables.
+
+
+```{r echo=FALSE}
+dim(loan)
+```
+
+
+ Q: The first question can be asked is what kinds of loans does Prosper make?
+
+```{r echo=FALSE}
+ggplot(aes(x=ListingCategory..numeric.), data = loan)+
+  geom_bar(color="steelblue", fill="white")+
+  theme(aspect.ratio = 1/1)
+```
+
+Listing Categories are:
+
+```{r echo=FALSE}
+cat <- c("0 - Not Available", "1 - Debt Consolidation", "2 - Home Improvement", "3 - Business", "4 - Personal Loan", "5 - Student Use", "6 - Auto, 7- Other", "8 - Baby&Adoption", "9 - Boat", "10 - Cosmetic Procedure", "11 - Engagement Ring", "12 - Green Loans", "13 - Household Expenses", "14 - Large Purchases", "15 - Medical/Dental", "16 - Motorcycle", "17 - RV", "18 - Taxes", "19 - Vacation", "20 - Wedding Loans")
+cat
+```
+
+As we see, the taller bar represents Debt Consolidation category. The most popular purposes for Prosper loans is to pay off credit card debt. "Not available" and "Other"" purposes came after.
+
+
+Q: Term loans
+
+```{r echo=FALSE}
+
+ggplot(aes(x=Term/12), data = loan)+
+  geom_bar(color="steelblue", fill="white", width = 1)+
+  theme(aspect.ratio = 2/1)
+  
+```
+
+As we can see, all loans have terms of one, three or five years. 
+
+```{r  echo=FALSE}
+#  LoanOriginationQuarter contains quarters (q1,q2,q3,q4) and he year. I would to preseve only the  quater string. For  this, I used separate tidyr function.
+df <- loan %>% separate(LoanOriginationQuarter, c("LoanOriginationQuarter", "Year"), " ")
+loan <- subset(df, select = -c(Year) )
+loan$LoanOriginationQuarter <- factor(loan$LoanOriginationQuarter)
+
+# Create an new LoanOrigination columns for year and month 
+# year and month functions are from lubridate library
+
+loan$LoanOriginationYear <- factor(loan$LoanOriginationDate)
+loan$LoanOriginationYear <- year(loan$LoanOriginationYear)
+
+loan$LoanOriginationMonth <- factor(loan$LoanOriginationDate)
+loan$LoanOriginationMonth <-  month(loan$LoanOriginationMonth)
+
+```
+
+
+```{r echo=FALSE}
+
+p1 <- ggplot(aes(x= LoanOriginationYear), data = loan)+
+  geom_bar(color="steelblue", fill="white")+
+  scale_x_continuous(breaks = seq(2005,2014,1))+
+  coord_flip()
+
+p2 <- ggplot(aes(x= LoanOriginationMonth), data = loan)+
+  geom_bar(color="steelblue", fill="white")+
+  scale_x_continuous(breaks = seq(1,12,1))
+
+p3 <- ggplot(aes(x= LoanOriginationQuarter), data = loan)+
+  geom_bar(color="steelblue", fill="white")
+
+grid.arrange(p3,p2,p1,ncol=2)
+
+```
+
+As we can see, number of loans increases across years. We note that at 2009, the SEC ordered Prosper.com to stop making new loans, because federal law prohibits the sale or offer of securities without the company registering with the regulator. This is why we see a decrease in number of loans in this year. We see too that the number of loans in the first and 4th quater is greater than its number in the middle of year.
+
+
+ Q: loan Status
+
+```{r echo=FALSE }
+ls <- c("Completed","Current","FinalPaymentInProgress","Cancelled","Defaulted",
+        "Past Due (1-15 days)","Past Due (16-30 days)","Past Due (31-60 days)","Past Due (61-90 days)","Past Due (91-120 days)", "Past Due (>120 days)", "Chargedoff")
+
+ggplot(aes(x= ordered(LoanStatus, levels = ls), y = ..prop..,group =1), data = loan)+
+  geom_bar(color="steelblue", fill="white")+
+   coord_flip()+
+  xlab('Loan Status')+
+  ylab('% of loans')+
+  theme(aspect.ratio = 1/1)
+```
+
+Completed loan status:  is a loan that is fully paid off according to the schedule or prepaid. 
+Current loan status: is a loan that is making payments on time and as agreed.
+ChargedOff loan status: is a loan with  5 missed payments (i.e. 150 days).
+Defaulted loan status: is a loan thah has a default reason, which is one of [the followings:](https://developers.prosper.com/docs/investor/loans-api/)
+
+* 1 = Delinquency
+* 2 = Bankruptcy   
+* 3 = Deceased
+* 4 = Repurchased
+* 5 = PaidInFull
+* 6 = SettledInFull
+* 7 = Sold
+
+
+ Q: Prosper rating and Prosper score
+
+
+```{r echo=FALSE}
+loan$ProsperRating..Alpha. <- ordered(loan$ProsperRating..Alpha., levels = c('AA','A','B','C','D','E','HR',""))
+p1 <- ggplot(aes(x= ProsperRating..Alpha.), data=loan)+ 	
+  geom_bar(color="steelblue", fill="white") 
+
+p2 <- ggplot(aes(x= ProsperScore), data=loan)+ 	
+  geom_bar(color="steelblue", fill="white") 
+
+grid.arrange(p1,p2, ncol=2)
+```
+
+We see listing Prosper ratings from the best(A) to the worst(HR). The taller bar represents listings without any  Prosper Rating (NA). To discover/exploring his story, I facet the plot by ListingCreationYear variable. Prosper score is a custom risk score built using historical Prosper data. The score ranges from 1-10, with 10 being the best, or lowest risk score. 
+
+```{r echo=FALSE}
+
+ggplot(aes(x= ProsperRating..Alpha.), data=loan)+ 	
+  facet_wrap(~ factor(year(factor(loan$ListingCreationDate))))+
+  geom_bar(color="steelblue", fill="white")
+```
+
+As we can see in the plot, the bar bresenting no Prosper Rating exists only in 2005,2006,2008 and 2009. After 2009, the N/A bar disappeared. What I think about is the Prosper.com adds Prosper Rating feature after 2009.
+
+
+
+Q: Distribution of loan amounts
+
+```{r echo=FALSE}
+summary(loan$LoanOriginalAmount)
+```
+
+
+```{r echo=FALSE}
+ggplot(aes(x = LoanOriginalAmount), data =loan)+
+  geom_histogram(binwidth = 1000, color="steelblue", fill="white")+
+  scale_x_continuous(breaks = seq(1000,35000,3000))
+```
+
+Amount loan is limited between 1000 and 35000 dollars. It has a right skewed distribution. We see some descending peaks at 4000, 15000, 20000 and 25000 dollars.
+
+Q: What about borrower rate ?
+
+```{r echo=FALSE}
+summary(loan$BorrowerRate)
+```
+
+
+```{r echo=FALSE}
+ ggplot(aes(x = BorrowerRate ), data =loan)+
+  geom_histogram( color="steelblue", fill="white")+
+  scale_x_continuous(breaks = seq(0,0.5,0.05))+
+  theme(aspect.ratio = 1/1)
+```
+
+BorrowerRate is the Borrower's interest rate for a given loan. As can we see, it is nearly normally distributed. 
+
+
+Q: How many days take a loan to be be funded?
+
+```{r echo=FALSE}
+loan$NumberOfDaysLoanBeFunded <- as.numeric(as.POSIXct(as.Date(as.character(loan$LoanOriginationDate)), format = "%Y/%m/%d") - as.POSIXct(as.Date(as.character(loan$ListingCreationDate)), format = "%Y/%m/%d")) 
+  
+summary(loan$NumberOfDaysLoanBeFunded)
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = NumberOfDaysLoanBeFunded), data = loan)+
+  geom_bar(color="steelblue", fill="white", width = 0.7)+
+  scale_x_continuous(breaks = seq(1,1100,5), limits = c(1,60))+
+  theme(aspect.ratio = 1/1)
+
+```
+
+As we can see, a loan takes by median 9 days to be funded. The hostogram plot is limted at 100 days. There are many outliers in the NumberOfDaysLoanBeFunded data. 
+
+
+Q: Borrower Employment Status
+
+```{r echo=FALSE}
+ggplot(aes(x= EmploymentStatus), data =loan)+
+  geom_bar(color="steelblue", fill="white")+
+  coord_flip()+
+  theme(aspect.ratio = 1/1)
+```
+
+As we can see, most borrowers are employed.
+
+
+Q: Borrowers Occupation
+
+```{r echo=FALSE}
+table(loan$Occupation)
+length(unique(loan$Occupation))
+```
+
+Borrowers mentioned 68 occupations. Professional (13628) and "other"(28617) are the most borrower occupations.
+
+
+Q: Borrower Employment status duration
+
+```{r echo=FALSE}
+summary(loan$EmploymentStatusDuration)
+```
+
+
+```{r echo=FALSE}
+ggplot(aes(x= EmploymentStatusDuration), data =loan)+
+  geom_histogram(color="steelblue", fill="white", binwidth = 12)+
+  scale_x_continuous(breaks = seq(0,600,100), limits = c(0,550))+
+  xlab("Employment Status Duration (in months)")+
+  theme(aspect.ratio = 1/1)
+
+```
+
+Meadian of Borrowers EmploymentStatusDuration  is abour 67 months(5.5 years). Mean is at 8 years.
+
+Q: 
+
+```{r echo=FALSE}
+ggplot(aes(x= IsBorrowerHomeowner, y = ..prop.., group =1), data =loan)+
+  geom_bar(color="steelblue", fill="white", width = 0.7)+
+  theme(aspect.ratio = 2/1)
+```
+
+proportion of Borrower Homeowner is very close to that of not Borrower Homeowner.
+
+
+Q: Let's know about the Debt To Income Ratio of the borrower.
+
+```{r echo=FALSE}
+summary(loan$DebtToIncomeRatio)
+```
+
+```{r echo=FALSE}
+loan$DebtToIncomeRatio.bucket <- cut(loan$DebtToIncomeRatio, breaks = c(0,1,2,10,11), right=TRUE)
+ggplot(aes(x= DebtToIncomeRatio.bucket , y =..prop.., group =1), data = loan)+
+  geom_bar(color="steelblue", fill="white", width = 0.7)+
+  theme(aspect.ratio = 1/1)
+```
+
+Most borrowers have DebtToIncomeRatio in (0,1] interval.
+
+
+Q: Investors are the persons that funded a loan. Each loan has its number of investors
+
+```{r echo=FALSE}
+summary(loan$Investors)
+```
+
+As we can see, many investors can funded one loan. 
+
+Q: 
+
+```{r echo=FALSE}
+
+ggplot( data = subset(loan, !is.na(EstimatedLoss)&!is.na(EstimatedReturn)) )+
+    geom_histogram(aes(x=EstimatedReturn), alpha=0.2, color="steelblue", fill="white")+
+    geom_histogram(aes(x=EstimatedLoss),  alpha=0.2, color="steelblue", fill="steelblue")+
+    theme(aspect.ratio = 1/1)
+    
+```
+
+
+In this graph, I plot the distribution of EstimatedReturn and EstimatedLoss. The variable values are assigned to the listing (loan before be funded) at the time it was created. They have a normal distrubution.
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+There are 113937 loans (or listings, the listing become loan when is funded) with 81 variables.
+There are many factor variables. In this analysis, I intersted to these factor variables: ProsperScore, LoanStatus, ProsperRating..Alpha., LoanOriginationAmount Occupation, EmploymentStatus and IsBorrowerHomeowner.
+
+* ProsperScore: 1 2 3 4 5 6 7 8 9 10 11.
+* ProsperRating..Alpha.:A AA B C D E HR.
+* IsBorrowerHomeowner: False or True.
+* EmploymentStatus: Employed, Full-time, Not available, Not employed, Other, Part-time Retired, Self-employed.
+* LoanStatus: Completed,Current, FinalPaymentInProgress, Cancelled, Defaulted, Past Due, Chargedoff.
+        
+##### Other observations:
+
+- Most loans are Current status
+- Most loan purpose is Debt Consolidation.
+- Loan amount is between 1000 and 35000, the mean is at 8337$
+- Loan terms are 1,3 or 5 years.
+- Borrower Rate is between 0 and 0.4975 with a mean of 0.1928.
+- People tend to borrow in the first or last quarter of the year.
+- Most borrowers are employed
+- A loan can be funded by more than one investors. 
+- Most of boroowers has a debt to income ratio less or equal 1.
+- A loan takes by median 9 days to be funded.
+
+
+
+### What is/are the main feature(s) of interest in your dataset?
+
+The main features in the data set are ProsperRating..Alpha., ProsperScore, LoanStatus, DebtToIncomeRatio. I'd like to determine which features are best for predicting if a loan will pay-off its loan on time.
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest?
+
+### Did you create any new variables from existing variables in the dataset?
+- I correct the Prosper Rating variable order as AA, A, B, C, D, E, HR instead of this order A AA B C D E HR.
+- I create a LoanOriginationYear, LoanOriginationMonth columns to get the Year of LoanOriginationDate. The LoanOriginationQuarter column contains the year and the quarter of the origination loan, I only preserved the quater part of this value. 
+- I create a bucket variable for DebtToIncomeRatio to  better present the variable. 
+- I create a NumberOfDaysLoanBeFunded variable to calculate number of days a loan takes to be funded.
+
+### Of the features you investigated, were there any unusual distributions? \
+Did you perform any operations on the data to tidy, adjust, or change the form \
+of the data? If so, why did you do this?
+
+I just ordered the Loan Status factor variable, to make the bar of "Due past >120 days" loan status coming after the "Due past(90-120 days)"  bar in the plot.
+
+
+
+# Bivariate Plots Section
+
+
+Q:  The introduction of this report stated that based on the **ProsperScore** and other information Prosper will obtain, a borrower will be assigned a **ProsperRating** (risk score), from A to HR.
+Now I w'd like to know how is the relationsip between these two variables: ProsperScore and ProsperRating using scatterplot.
+
+```{r echo=FALSE}
+ggplot(aes(x = ProsperScore, y=ProsperRating..Alpha.), data = subset(loan, !(loan$ProsperRating..Alpha.=="" & loan$ProsperScore=="")))+
+  geom_point(position = 'jitter', alpha =0.5)
+```
+
+As we can see, high ProsperScore leads to the best ProsperRating  and vice versa.  1 ProsperScore is a the worst score lead to a worst ProperRating (E, HR). We see very few points in the ProperRating best region (A and AA). This is because ProsperRating is built depending on other information than the ProsperScore. We note that the plot suffers from some overplotting without jitter.
+
+
+Q: What other information according to which the ProsperRating is calculated?
+
+```{r echo=FALSE}
+ggplot(aes(x= ProsperRating..Alpha.,  fill = IsBorrowerHomeowner), data = subset(loan, !(loan$ProsperRating..Alpha.=="" & loan$ProsperScore=="")))+
+  geom_bar(position=position_dodge(),color="steelblue")+
+  scale_fill_manual(values=c("steelblue",  "white"))
+  # scale_fill_brewer(palette="Dark2")
+  
+```
+
+We see that despite the borrower is not homeowner can get A, AA and B prosper rating. Therefore the homeowner caracteristic is not used to determine prosper rating. 
+
+
+Q: Is DebtToIncomeRatio used to determine ProsperRating and BorrowerRate?
+
+```{r echo=FALSE}
+ggplot(aes(y=DebtToIncomeRatio.bucket, x = ProsperRating..Alpha. ), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+  geom_point(position = 'jitter', alpha =0.5)
+```
+
+It is clear that it's not used to determine Prosper Rating.
+
+```{r echo=FALSE}
+ggplot(aes(x= BorrowerRate, y = DebtToIncomeRatio ), data = loan)+
+  geom_point(position = 'jitter', alpha =0.4)
+```
+
+Nor to determine BorrowerRate
+
+
+Q: Now, one can ask: Is the 5 years loan term available for all borrowers? In other word, is there a relationship between terms and Prosper Rating?
+
+```{r echo=FALSE}
+ggplot(aes(x=Term/12), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+  facet_wrap(~ ProsperRating..Alpha.)+
+  geom_bar(color="steelblue", fill="white")
+```
+
+Loan is assigned by a Prosper rating at the time the listing was created. It takes the sympols: A(best) AA B C D E HR(worst). As we can see, term loan depend on the Prosper rating. Five-year term loan is available at all Prosper Rating levels, but only a three-year term is available on an HR Prosper rating loan.
+
+
+Q: Let's know if the ProsperRating affect the BorrowerRate.
+
+```{r echo=FALSE}
+ggplot(aes(x=ProsperRating..Alpha., y = BorrowerRate ), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+  geom_point(position ='jitter', alpha =0.5)
+
+```
+
+loans with worst risk score (Prosper rating) has Higer BorrowerRate; a strong negative correlation. Ok, but why? Can be a way to recover the loan faster? We note that the plot suffers from some overplotting without jitter.
+
+
+Q:  Is there a relationship between Prosper rating and  EstimatedLoss
+
+```{r echo=FALSE}
+ggplot(aes(x= ProsperRating..Alpha., y = EstimatedLoss ), data = loan)+
+  geom_point(position = 'jitter', alpha =0.6)
+```
+
+A strong negative correlation between EstimatedLoss and ProsperRating. Best prosperRating borrowers have small estimated loss.
+
+
+Q: Does the loan Term influence the BorrowerRate, let's see.
+  	
+```{r echo=FALSE}
+
+ggplot(aes(x=factor(Term/12), y=BorrowerRate), data = loan)+
+  geom_boxplot(na.rm=T,color="steelblue", fill="white")+
+  theme(aspect.ratio = 1/1)
+
+```
+
+What I thought that where the years Term increase the BorrowerRate increase too, like a traditional bank does. This is not what is shown in the box plot. It's true that BorrowerRate median increase according to number of years in the Term, howeever three years Term has the larger box and range and has some ouliers. As we saw in univariate section, the number of 3 years term loans is the largest. what I think this term is the goal of this business. 
+
+
+Q: Let's know about BorrowerRate and LoanOriginalAmount.  
+
+```{r echo=FALSE}
+ggplot(aes(y= BorrowerRate, x = LoanOriginalAmount), data = loan)+ 
+  geom_point( position = 'jitter', alpha =0.5)
+```
+
+BorrowerRate range and density decreases as long as LoanAmount increases. I can't do strong conclusion for these two variables with this plot as it is. I do think that other factor or factors affects the BorrrowerRate. I will explore that in the multivariate section. Otherwise, we can see some points far way to the global density; outliers with very small or 0 BorrowerRate. Let's know who are :)
+
+```{r echo=FALSE}
+loan$NumberOfDaysPayOff <- as.numeric(as.POSIXct(as.Date(as.character(loan$ClosedDate)), format = "%Y/%m/%d") - as.POSIXct(as.Date(as.character(loan$LoanOriginationDate)), format = "%Y/%m/%d"))/84600
+  
+summary(loan$NumberOfDaysPayOff)
+```
+
+I created a new variable NumberOfDaysPayOff to calculate number of days taken by the borrower to pay-off its loan. I used this variable to observe any anomaly in the loans with 0 BorrowerRate.
+
+```{r echo=FALSE}
+ConcelledStatus <- loan %>% filter(BorrowerRate ==0)%>% select(LoanStatus,ListingCategory..numeric., NumberOfDaysPayOff,ProsperRating..Alpha., Term, LoanOriginationYear, LoanOriginalAmount )
+ConcelledStatus
+
+```
+
+I tried to write a code to discover from where these outliers came. I selected some variables Which I suspect they caused these data. I can't conclude ant thing! All 0 borrower rate loan are completed, i.e, the borrowers pay-off thiers loans.
+
+
+Q: Let's know about loan amount and Terms.
+
+```{r echo=FALSE}
+ggplot(aes(x= Term/12, y = LoanOriginalAmount ), data = loan)+
+  geom_point( position = 'jitter', alpha =0.5)+
+  scale_x_continuous( breaks = seq(1,5,2))+
+  theme(aspect.ratio = 1/1)
+```
+
+
+```{r echo=FALSE}
+ggplot(aes(x= factor(Term/12), y = LoanOriginalAmount ), data = loan)+
+  geom_boxplot()+
+  theme(aspect.ratio = 1/1)
+```
+
+As was expected, when the loan amount increases the pay-off term also increases and vice varsa. This is true for one year term loan. For the two other terms, we can see that they have praticely the same LoanAmount range and a different mean and median (look at boxplot). What explain the same LoanAmount, a different term? No doubt a third variable.
+
+
+
+Q: Does the Debt To Income Ratio influence the BorrowerRate?
+
+```{r echo=FALSE}
+ggplot(aes(x=DebtToIncomeRatio.bucket, y = BorrowerRate ), data = subset(loan, !(DebtToIncomeRatio.bucket=="")))+
+  geom_point(position = 'jitter', alpha =0.5)
+```
+
+There is no correlation between the two variables. It seems that the BorrowerRate is determined in isolation of the borrower financial situation.
+
+
+Q:
+
+```{r echo=FALSE}
+ggplot(aes(x= ProsperRating..Alpha., y = LoanOriginalAmount ), data = subset(loan, !(loan$ProsperRating..Alpha.=="")))+
+  geom_boxplot()
+```
+
+In the above boxplot, we try to looking at how ProsperRating and LoanAmount relate with each other. Loan amount is the amount funded by investors. We note that it may be that the borrower is asking for an amount, but he will not have the full amount requested. As it is shown, the worst score risk loans E and H recive the lesser amounts, this is explained by the small range.
+
+```{r echo=FALSE}
+ggplot(aes(x= factor(ListingCategory..numeric.), y = LoanOriginalAmount ), data = loan)+
+  geom_boxplot()
+```
+
+As we see in previous plot, number of loan with debt consolidation purpose is the larget among all other purpose. Likwise, the median of loan amount with this purpose is the biggest too. After come the 'other' purpose (8) then the Wedding Loans (20).
+
+
+Q: Is the DebtToIncomeRatio relate to the Loan amount
+
+```{r echo=FALSE}
+ggplot(aes(y= LoanOriginalAmount, x = DebtToIncomeRatio ), data = loan)+
+  geom_point(position = 'jitter', alpha =0.4)+
+  xlim(0, 0.25)
+```
+
+They don't relate to each other. I limited the x axis from 0 to 0.25 to explore better the data. 
+
+
+Q: 
+
+```{r echo=FALSE}
+ggplot(aes(x= EstimatedLoss, y = LoanOriginalAmount ), data = loan)+
+  geom_point(position = 'jitter', alpha =0.4)
+```
+
+Estimated loss is the estimated principal loss on charge-offs. It is assigned to the listing at the time it was created ( before loan be funded). We can see that as long as the estimated loss increases the loan amount and density (number of loan) decrease.
+
+
+Q: Does a lower risk score (ProsperRating) can lead more to a Chargedoff loan than the higher risk score?
+
+```{r echo=FALSE}
+ggplot(aes(x=ProsperRating..Alpha., fill = LoanStatus ), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+  geom_bar()+
+  scale_color_brewer(palette="Dark2")+
+  theme(aspect.ratio = 1/1)
+```
+
+```{r echo=FALSE}
+ggplot(aes(x=ProsperRating..Alpha., y = LoanStatus ), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+  geom_point(position = 'jitter', alpha = 0.1)+
+  theme(aspect.ratio = 1/1)
+```
+
+Pink color in the bar chart represents the proportion of a chargedoff loan according to each score risk(Prosperrating). Whenever we move towards the worst ProsperRating, i.e, towards the higest risk score, the chargedoff proportion increases. This was expected. The scatterplot shows this clearly with borrowers density. 
+
+
+Q: In the plot below, I gathered all loan status that we can say that there is a problem with thiers borrowers in one group. This group does contain Completed, Cancelled, Current and FinalPaymentInProgress status. And I ploted the char bar of prosper rating by the status in the new group.
+
+```{r echo=FALSE}
+p1 <- ggplot(aes(x=ProsperRating..Alpha., y = ..prop.., group =1), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+   geom_bar(color="steelblue", fill="white", width = 0.7)+
+  theme(aspect.ratio = 1/1)+
+  ggtitle('Distribution of prosper rating ')
+
+p2 <- ggplot(aes(x=ProsperRating..Alpha., y = ..prop.., group =1), data = subset(loan%>%filter(!LoanStatus %in% c("Completed", "Cancelled","Current", "FinalPaymentInProgress")), !(ProsperRating..Alpha.=="")))+
+   geom_bar(color="steelblue", fill="white", width = 0.7)+
+  theme(aspect.ratio = 1/1)+
+  ggtitle('Delinqued group')
+
+grid.arrange(p1,p2, ncol=2)
+  
+```
+
+
+Despite D prosper rating loans are not the most numerous loan in the data (the C prosper rating loan is), we can observe that D prosper rating delinquent borrowers are more noumerous than any other borrowers even than to E and HR borrowers. This may be due to the fact that thiers prosper rating come in the middle between the good and worst prosper rating and this confuses investors.
+
+
+Q: 
+
+```{r echo=FALSE}
+p1 <- ggplot(aes(x=ProsperRating..Alpha., y = ..prop.., group =1), data = subset(loan%>%filter(!LoanStatus %in% c("Completed", "Cancelled","Current", "FinalPaymentInProgress")), !(ProsperRating..Alpha.=="")))+
+   geom_bar(color="steelblue", fill="white", width = 0.7)+
+  theme(aspect.ratio = 1/1)+
+  facet_wrap(~ Term/12)+
+  ggtitle('Delinqued group')
+
+p2 <- ggplot(aes(x=ProsperRating..Alpha., y = ..prop.., group =1), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+   geom_bar(color="steelblue", fill="white", width = 0.7)+
+  theme(aspect.ratio = 1/1)+
+  facet_wrap(~ Term/12)+
+  ggtitle('Distribution of prosper rating across Term')
+
+grid.arrange(p2,p1, ncol =1)
+
+```
+
+This plot is when I add Term variable. Whtever the term, D prosper rating delinquent borrower  exist satically. What I observed is the number of E prosper rating delinquent borrowers decrease when we pass to higer Term. The opposite occurs with A prosper rating delinquent borrowers.
+
+
+Q:
+
+```{r echo=FALSE}
+ggplot(aes(x = LoanStatus, fill =  EmploymentStatus), data = subset(loan, !(IsBorrowerHomeowner=="")))+
+  geom_bar()+
+  coord_flip()+
+  scale_color_brewer(palette="Dark2")
+```
+
+As we can see, EmploymentStatus doesn't influence the pay-off/not pay-off of the loan. Where we see that the Chargedoff and Defaulted loan can be the loan status of any borrower emplyement status.
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the dataset?
+
+- There is a correlation between ProsperScore and ProsperRating(risk score)
+- Borrower with the worst ProsperRating (HR) can't take a loan with 5 years term.
+- Borrowers with best ProsperRating have a lower BorrowerRate and vice versa.
+- 3 years Term has the largest BorrowerRate range. 
+- There is no linear relationship between BorrowerRate and Term like in traditional bank.
+- There is a correlation between Terms and Loan amount.
+- It seems that the BorrowerRate is determined in isolation of the borrower financial situation.
+- Worst borrower prosper rating recieves a lesser loan amount. 
+- Worst ProsperRating leads more to a chargedoff loan.
+- As long as Estimated loss increases the loan amount and density (number of loan) decrease.
+- There is a correlation between EstimatedLoss and ProsperRating.
+- D prosper ratingdelinquent borrowers are more noumerous than any other borrowers even than to E and HR borrowers.
+
+
+### What was the strongest relationship you found?
+
+- **A Strong positive** relationship between:
+   ProsperScore and ProsperRating; 
+   BorrowerRate and EstimatedLoss.
+   
+- A positive relationship between:
+  ProsperRating and LoanOriginalAmount;
+  Term and LoanOriginalAmount.
+  
+- **A strong negative** relationship between 
+  BorrowerRate and ProsperRating;
+  EstimatedLoss and ProsperRating.
+  
+- A negative relationship between 
+  EstimatedLoss and LoanOriginalAmount;
+  BorrowerRate and LoanOriginalAmount.
+  
+
+# Multivariate Plots Section
+
+Q: How BorrowerRate, LoanOriginalAmount and ProsperRating ralate to each other?
+
+```{r echo=FALSE}
+ggplot(aes(y= BorrowerRate, x = LoanOriginalAmount, color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
+  geom_point( position = 'jitter', alpha =0.5)+
+  scale_color_brewer(palette="Dark2")
+```
+
+In this nice plot, we see that a [0, 0.25] BorrowerRate interval is reserved for borrower with the best ProsperRating (A , AA, B and C). Loan amount greater than 25000$ is allowed only to borrowers with A, AA, B prosper rating, where we see only 3 colors representing these prosper ratings.
+
+Q: 
+
+```{r echo=FALSE}
+ggplot(aes(x= Term/12, y = BorrowerRate , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
+  geom_point( position = 'jitter', alpha =0.6)+
+  scale_color_brewer(palette="Dark2")
+```
+
+In this plot, I tried to explore 3 variables as in previous plot, but this time I replaced LoanOriginationAmount by the Term. This plot says: HR prosper rating borrwers (brown color) cannot have 5 years term. 3 years term is more dense with largest BorrowerRate range. [0, 0.25] borrowerRate interval is reserved for borrowers with best prosper rating.
+
+Q:
+
+```{r echo=FALSE}
+ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
+  geom_point( position = 'jitter', alpha =0.6)+
+  facet_wrap(~ Term/12)+
+  scale_color_brewer(palette="Dark2")+
+  scale_x_log10()
+```
+
+Another nice plot :). In addition to what we said on the previous plot, we add that borrowers with AA, A and B prosper rating are only the borrowers that theirs amount loans could exceed 25000$. This plot gathers all what we said ine the 2 previous plot. 
+
+
+Q:
+
+```{r echo=FALSE, Plot_Two}
+ggplot(aes(x= EstimatedLoss, y = LoanOriginalAmount , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
+  geom_point( position = 'jitter', alpha =0.6)+
+  facet_wrap(~ Term/12)+
+  scale_color_brewer(palette="Dark2")+
+  scale_x_log10()
+```
+
+Here, I just replaced BorrowerRate variable by EstimatedLoss. The two variables are strongly related. In this plot, the boundaries between categories and intervals are very clear.
+
+
+
+Q: In the bivariate plots section, we saw that despite the E and RH prosper rating borrowers have higher borrowerRate and Estimatedloss than those in D prosper rating borrowrs, the latter are the most numerous. Why? I think the following plots answer us.
+
+```{r echo=FALSE}
+ggplot(aes(x= ProsperRating..Alpha., y = LoanOriginalAmount), data = subset(loan, !(ProsperRating..Alpha.=="")))+
+  geom_point(position = 'jitter', alpha =0.2)
+```
+
+```{r echo=FALSE}
+ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount, color = ProsperRating..Alpha.), data = subset(loan%>%filter(!LoanStatus %in% c("Completed", "Cancelled","Current", "FinalPaymentInProgress")), !(ProsperRating..Alpha.=="")))+
+  geom_point(position = 'jitter', alpha =0.25)+
+  scale_x_log10()
+
+```
+
+
+In the first graph I verify LoanOriginalAmount for the different ProsperRating. In the second graph, I ploted LOanOriginalAmount by BorrowerRate, and I colored the ProsperRating for only **delinqued group**. Green Color (D) is dense in this plot. As we can see, the loan amount makes the difference and therfore the MonthlyLoanPayment. Investors defund D perser rating loans almost like they defund B and C. A bad prosper rating with a challenging MonthlyLoanPayment lead to more delinqued borrowrs.
+
+
+### Building a logstic model to predict if a borrower is a futur delinquent or not (after the loan is funded).
+
+To create this model, first I supposed if a loan status is in this list: (Completed, Cancelled, Current, FinalPaymentInProgress) then its borrower is delinquent. I create **IsBorrowerDelinquent** independent variable.
+
+Second, explanatory variables must not be strongly correlated each other. Therefore I chose EstimatedLoss rather BorrowerRate because the latter determine better the boundaries of prosper rating levels. The other explanatory variable is the LoanOriginalAmount.
+
+```{r echo=FALSE}
+data <- loan%>%select(EstimatedLoss, LoanOriginalAmount)
+
+data$IsBorrowerDelinquent <- ifelse(  loan$LoanStatus %in% 
+                                      c("Completed", "Cancelled","Current", "FinalPaymentInProgress"),0, 1)
+# omit NA data
+data <- na.omit(data,EstimatedLoss)
+dim(data)[1]/4
+```
+
+
+```{r echo=FALSE}
+#  Divide data into train and test data, 25% of data is for test process
+train <- data[1:21213,]
+test  <- data[21214:dim(data)[1],]
+# Model fitting
+model <- glm(IsBorrowerDelinquent ~.,family=binomial(link='logit'),data=train)
+summary(model)
+
+```
+
+```{r echo=FALSE}
+
+print(paste('EstimatedLoss coef',exp(12.92)/10000))
+print(paste('LoanOriginalAmount coef',exp(-2.411e-05))) 
+print(paste('LoanOriginalAmount coef',1/exp(-2.411e-05)))
+
+```
+
+**Interpreting the results of our logistic regression model**:
+
+First of alla, we can see that EstimatedLoss and LoanOriginalAmount are statistically significant; thiers p-values are < 0.05. The smaller p-value the more statistically significant. Negatice sign indicates anegative correlation between predictor and independent variables. For one unit increase in Estimated Loss, delinquent borrowers are 40 times as likely, holding all other variables constant. For one unit deccrease in LoanOriginalAmount, delinquent borrowers are 1 time as likely, holding all other variables constant. 
+
+
+```{r  echo=FALSE}
+# Assessing the model
+fitted.results <- predict(model,test,type='response')
+fitted.results <- ifelse(fitted.results > 0.5, 1,0)
+
+misClasificError <- mean(fitted.results != test$IsBorrowerDelinquent)
+print(paste('Accuracy',1-misClasificError))
+```
+
+The 0.90 accuracy on the test set is quite a good result. When I added DebtToIncome variable I get 0.9060. I can't consider it as a sognificant improvement.
+
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+yes there are. BorrowerRate, EstimatedLoss and ProsperRating are strongly correlated variables to each other. LoanOriginalAmount and ProsperRating, and LoanOriginalAmount and Term are two by tow positively corelated.
+
+
+### Were there any interesting or surprising interactions between features? 
+
+Yes, the number of D prosperRating delinquent borrowers are more numerous to the one od E and HR delinquent borrowers.
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+Yes, I created a logistic linear model starting from the IsDeliquentBorrower, EstimatedLoss and LoanOriginalAmount variables. I tries to add other variables to improve accuracy value but in vain.
+
+
+
+# Final Plots and Summary
+
+### Plot One    
+
+
+```{r echo=FALSE}
+p2 <- ggplot(aes(x= LoanOriginationQuarter), data = loan)+
+  geom_bar(color="steelblue", fill="white", width = 0.4)
+ 
+p1 <- ggplot(aes(x= EmploymentStatus, y =..prop.., group =1), data =loan)+
+  geom_bar(color="steelblue", fill="white")+
+  coord_flip()
+
+p3 <- ggplot(aes(x= DebtToIncomeRatio.bucket , y =..prop.., group =1), data = loan)+
+  geom_bar(color="steelblue", fill="white",width = 0.5)
+ 
+
+p4 <-  ggplot(aes(x=factor(Term/12), y=BorrowerRate), data = loan)+
+  geom_boxplot(na.rm=T,color="steelblue", fill="white")
+
+
+grid.arrange(p1,p2,p3,p4, ncol =2,top =" Prosper dataset summary")
+
+```
+
+
+### Description One
+
+I chose this plot to describe and sums up this busness. 
+BorrowerRate doesn't vary according to the loan term category. Exactly the opposite happens in traditional bank, where interst rate increases as long as the pay-off term increases. 
+The magority of Borrowers are employed with a debt to income ratio in an interval of ( 0,1]. 
+Borrowers ask more for a loan in 1st and 4th quarter of year.
+
+### Plot Two
+```{r echo=FALSE}
+g1 <- ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
+  geom_point( position = 'jitter', alpha =0.6)+
+  facet_wrap(~ Term/12)+
+  scale_color_brewer(palette="Dark2")+
+  ggtitle("Loan amount by Borrower rate ")+
+  xlab( "Borrower rate")+
+  ylab("Loan amount in $")
+  
+
+g2 <- ggplot(aes(x= EstimatedLoss, y = LoanOriginalAmount , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
+  geom_point( position = 'jitter', alpha =0.6)+
+  facet_wrap(~ Term/12)+
+  scale_color_brewer(palette="Dark2")+
+  ggtitle("Loan amount by Estimated loss ")+
+  xlab( "Estimated loss")+
+  ylab("Loan amount in $")
+
+grid.arrange(g1,g2)
+```
+
+
+### Description Two
+These two plots sums up all what can be said about LoanOriginalAmout, Term, ProsperRating and BorrowerRate. In one side, they show a strong correlation between BorrowerRate, EstimatedLoss and ProsperRating to each other, and a positive correlation between LoanOriginalAmout and Tem/prosperRating in other side.
+
+
+### Plot Three
+```{r echo=FALSE}
+ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount, color = ProsperRating..Alpha.), data = subset(loan%>%filter(!LoanStatus %in% c("Completed", "Cancelled","Current", "FinalPaymentInProgress")), !(ProsperRating..Alpha.=="")))+
+  geom_point(position = 'jitter', alpha =0.25)+
+  scale_x_log10()+
+  ggtitle("Loan amount by Borrower rate for delinqued status ")+
+  xlab( "log 10 Borrower rate")+
+  ylab("Loan amount in $")
+```
+
+### Description Three
+
+In this plot, I tried to find why D prosper rating delinquet borrowers are more numerous compared to E and HR prosper rating delinquet borrowers, despite E and HR prosper rating delinquet borrowers have higer BorroweRate and EstimatedLoss. I concluded that D prosper rating is a confused prosper rating for investors (lenders). It come between the a zone of good prosper ratings and the worst. Lenders fund better this prosper rating level compared to E and HR prosper rating levels and the highly relatively monthly loan payement become a challenge for borrowers with this level of risk score.
+
+
+------
+
+# Reflection
+
+
+Peer to peer lending! This is the first time I hear about this kind of system. Along this journey, I learned new things and practiced what I saw in the previous lessons. At first, the large number of prosper data variables made me confused. But as I went step by step, I started to get used to it. At first I just tried to use 10 to 15 variables, but at the end of this data analysis I found myself looking beyond the 81 variables to build my model :)
+I started by understanding the provided description of variables. Then I asked myself some questions and I tried to find answers by exploring data with statistical summaries and graphics.
+There was a clear trend between ProsperRating and BorrowerRate/EstimatedLoss in one side and between delinquent borrowers and EstimatedLoss/BorrowerRate/LoanOriginalAmount in other side. For the logistic linear model, I included LoanOriginalAmount and EstimatedLoss to predict delinquency in borrowers. The model is able to predict delinquent borrowers with an accuracy of 0.90. It is a good value but is not enough. To improve this model, I would to know more about borrower behaviour by asking more question at the time he create his listing.
+
+
+# Reference:
+
+* [Uderstanding Prosper Loans](https://www.goodfinancialcents.com/prosper-loans/)
+* [How to perform a Logistic Regression in R](https://www.r-bloggers.com/how-to-perform-a-logistic-regression-in-r/)
+</div>
