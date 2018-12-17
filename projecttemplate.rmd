@@ -255,7 +255,6 @@ ggplot(aes(x = NumberOfDaysLoanBeFunded), data = loan)+
   geom_bar(color="steelblue", fill="white", width = 0.7)+
   scale_x_continuous(breaks = seq(1,1100,5), limits = c(1,60))+
   theme(aspect.ratio = 1/1)
-
 ```
 
 As we can see, a loan takes by median 9 days to be funded. The hostogram plot is limted at 100 days. There are many outliers in the NumberOfDaysLoanBeFunded data. 
@@ -301,7 +300,7 @@ ggplot(aes(x= EmploymentStatusDuration), data =loan)+
 
 Meadian of Borrowers EmploymentStatusDuration  is abour 67 months(5.5 years). Mean is at 8 years.
 
-Q: 
+Question: 
 
 ```{r echo=FALSE}
 ggplot(aes(x= IsBorrowerHomeowner, y = ..prop.., group =1), data =loan)+
@@ -336,7 +335,7 @@ summary(loan$Investors)
 
 As we can see, many investors can funded one loan. 
 
-Q: 
+Question: 
 
 ```{r echo=FALSE}
 
@@ -419,8 +418,6 @@ Q: What other information according to which the ProsperRating is calculated?
 ggplot(aes(x= ProsperRating..Alpha.,  fill = IsBorrowerHomeowner), data = subset(loan, !(loan$ProsperRating..Alpha.=="" & loan$ProsperScore=="")))+
   geom_bar(position=position_dodge(),color="steelblue")+
   scale_fill_manual(values=c("steelblue",  "white"))
-  # scale_fill_brewer(palette="Dark2")
-  
 ```
 
 We see that despite the borrower is not homeowner can get A, AA and B prosper rating. Therefore the homeowner caracteristic is not used to determine prosper rating. 
@@ -544,7 +541,7 @@ ggplot(aes(x=DebtToIncomeRatio.bucket, y = BorrowerRate ), data = subset(loan, !
 There is no correlation between the two variables. It seems that the BorrowerRate is determined in isolation of the borrower financial situation.
 
 
-Q:
+Question:
 
 ```{r echo=FALSE}
 ggplot(aes(x= ProsperRating..Alpha., y = LoanOriginalAmount ), data = subset(loan, !(loan$ProsperRating..Alpha.=="")))+
@@ -561,7 +558,7 @@ ggplot(aes(x= factor(ListingCategory..numeric.), y = LoanOriginalAmount ), data 
 As we see in previous plot, number of loan with debt consolidation purpose is the larget among all other purpose. Likwise, the median of loan amount with this purpose is the biggest too. After come the 'other' purpose (8) then the Wedding Loans (20).
 
 
-Q: Is the DebtToIncomeRatio relate to the Loan amount
+Question: Is the DebtToIncomeRatio relate to the Loan amount
 
 ```{r echo=FALSE}
 ggplot(aes(y= LoanOriginalAmount, x = DebtToIncomeRatio ), data = loan)+
@@ -572,7 +569,7 @@ ggplot(aes(y= LoanOriginalAmount, x = DebtToIncomeRatio ), data = loan)+
 They don't relate to each other. I limited the x axis from 0 to 0.25 to explore better the data. 
 
 
-Q: 
+Question: 
 
 ```{r echo=FALSE}
 ggplot(aes(x= EstimatedLoss, y = LoanOriginalAmount ), data = loan)+
@@ -621,7 +618,7 @@ grid.arrange(p1,p2, ncol=2)
 Despite D prosper rating loans are not the most numerous loan in the data (the C prosper rating loan is), we can observe that D prosper rating delinquent borrowers are more noumerous than any other borrowers even than to E and HR borrowers. This may be due to the fact that thiers prosper rating come in the middle between the good and worst prosper rating and this confuses investors.
 
 
-Q: 
+Question: 
 
 ```{r echo=FALSE}
 p1 <- ggplot(aes(x=ProsperRating..Alpha., y = ..prop.., group =1), data = subset(loan%>%filter(!LoanStatus %in% c("Completed", "Cancelled","Current", "FinalPaymentInProgress")), !(ProsperRating..Alpha.=="")))+
@@ -643,7 +640,7 @@ grid.arrange(p2,p1, ncol =1)
 This plot is when I add Term variable. Whtever the term, D prosper rating delinquent borrower  exist satically. What I observed is the number of E prosper rating delinquent borrowers decrease when we pass to higer Term. The opposite occurs with A prosper rating delinquent borrowers.
 
 
-Q:
+Question:
 
 ```{r echo=FALSE}
 ggplot(aes(x = LoanStatus, fill =  EmploymentStatus), data = subset(loan, !(IsBorrowerHomeowner=="")))+
@@ -705,7 +702,7 @@ ggplot(aes(y= BorrowerRate, x = LoanOriginalAmount, color = ProsperRating..Alpha
 
 In this nice plot, we see that a [0, 0.25] BorrowerRate interval is reserved for borrower with the best ProsperRating (A , AA, B and C). Loan amount greater than 25000$ is allowed only to borrowers with A, AA, B prosper rating, where we see only 3 colors representing these prosper ratings.
 
-Q: 
+Question: 
 
 ```{r echo=FALSE}
 ggplot(aes(x= Term/12, y = BorrowerRate , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
@@ -715,7 +712,7 @@ ggplot(aes(x= Term/12, y = BorrowerRate , color = ProsperRating..Alpha.), data =
 
 In this plot, I tried to explore 3 variables as in previous plot, but this time I replaced LoanOriginationAmount by the Term. This plot says: HR prosper rating borrwers (brown color) cannot have 5 years term. 3 years term is more dense with largest BorrowerRate range. [0, 0.25] borrowerRate interval is reserved for borrowers with best prosper rating.
 
-Q:
+Question:
 
 ```{r echo=FALSE}
 ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
@@ -728,7 +725,7 @@ ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount , color = ProsperRating..Alph
 Another nice plot :). In addition to what we said on the previous plot, we add that borrowers with AA, A and B prosper rating are only the borrowers that theirs amount loans could exceed 25000$. This plot gathers all what we said ine the 2 previous plot. 
 
 
-Q:
+Question:
 
 ```{r echo=FALSE, Plot_Two}
 ggplot(aes(x= EstimatedLoss, y = LoanOriginalAmount , color = ProsperRating..Alpha.), data = subset(loan, ProsperRating..Alpha.!=""))+
@@ -756,7 +753,6 @@ ggplot(aes(x= BorrowerRate, y = LoanOriginalAmount, color = ProsperRating..Alpha
 
 ```
 
-
 In the first graph I verify LoanOriginalAmount for the different ProsperRating. In the second graph, I ploted LOanOriginalAmount by BorrowerRate, and I colored the ProsperRating for only **delinqued group**. Green Color (D) is dense in this plot. As we can see, the loan amount makes the difference and therfore the MonthlyLoanPayment. Investors defund D perser rating loans almost like they defund B and C. A bad prosper rating with a challenging MonthlyLoanPayment lead to more delinqued borrowrs.
 
 
@@ -775,7 +771,6 @@ data$IsBorrowerDelinquent <- ifelse(  loan$LoanStatus %in%
 data <- na.omit(data,EstimatedLoss)
 dim(data)[1]/4
 ```
-
 
 ```{r echo=FALSE}
 #  Divide data into train and test data, 25% of data is for test process
