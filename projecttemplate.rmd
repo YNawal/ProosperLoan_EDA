@@ -29,7 +29,7 @@ My analysis is limited to the following variables:
 * BorrowerRate:	The Borrower's interest rate for this loan.
 * ProsperRating..Alpha.:	The Prosper Rating assigned at the time the listing was created between AA   HR. Applicable for loans originated after July 2009.
 * ProsperScore:	A custom risk score built using historical Prosper data. The score ranges from 1-10,   with 10 being the best, or lowest risk score.
-*istingCategory	: he category of the listing that the borrower selected when posting their listing
+* istingCategory	: he category of the listing that the borrower selected when posting their listing
 * Occupation:	The Occupation selected by the Borrower at the time they created the listing.
 * EmploymentStatus:	The employment status of the borrower at the time they posted the listing.
 * EmploymentStatusDuration:	The length in months of the employment status at the time the listing     was created.
@@ -66,6 +66,7 @@ library(lubridate)
 library(tidyr)
 setwd('E:/NanoDegree/EDA project')
 ```
+
 
 ```{r echo=FALSE, Load_the_Data}
 # Load the Data
@@ -107,11 +108,9 @@ As we see, the taller bar represents Debt Consolidation category. The most popul
 Q: Term loans
 
 ```{r echo=FALSE}
-
 ggplot(aes(x=Term/12), data = loan)+
   geom_bar(color="steelblue", fill="white", width = 1)+
   theme(aspect.ratio = 2/1)
-  
 ```
 
 As we can see, all loans have terms of one, three or five years. 
@@ -130,12 +129,10 @@ loan$LoanOriginationYear <- year(loan$LoanOriginationYear)
 
 loan$LoanOriginationMonth <- factor(loan$LoanOriginationDate)
 loan$LoanOriginationMonth <-  month(loan$LoanOriginationMonth)
-
 ```
 
 
 ```{r echo=FALSE}
-
 p1 <- ggplot(aes(x= LoanOriginationYear), data = loan)+
   geom_bar(color="steelblue", fill="white")+
   scale_x_continuous(breaks = seq(2005,2014,1))+
@@ -199,12 +196,13 @@ grid.arrange(p1,p2, ncol=2)
 
 We see listing Prosper ratings from the best(A) to the worst(HR). The taller bar represents listings without any  Prosper Rating (NA). To discover/exploring his story, I facet the plot by ListingCreationYear variable. Prosper score is a custom risk score built using historical Prosper data. The score ranges from 1-10, with 10 being the best, or lowest risk score. 
 
-```{r echo=FALSE}
 
+```{r echo=FALSE}
 ggplot(aes(x= ProsperRating..Alpha.), data=loan)+ 	
   facet_wrap(~ factor(year(factor(loan$ListingCreationDate))))+
   geom_bar(color="steelblue", fill="white")
 ```
+
 
 As we can see in the plot, the bar bresenting no Prosper Rating exists only in 2005,2006,2008 and 2009. After 2009, the N/A bar disappeared. What I think about is the Prosper.com adds Prosper Rating feature after 2009.
 
@@ -249,6 +247,7 @@ loan$NumberOfDaysLoanBeFunded <- as.numeric(as.POSIXct(as.Date(as.character(loan
   
 summary(loan$NumberOfDaysLoanBeFunded)
 ```
+
 
 ```{r echo=FALSE}
 ggplot(aes(x = NumberOfDaysLoanBeFunded), data = loan)+
@@ -338,12 +337,10 @@ As we can see, many investors can funded one loan.
 Question: 
 
 ```{r echo=FALSE}
-
 ggplot( data = subset(loan, !is.na(EstimatedLoss)&!is.na(EstimatedReturn)) )+
     geom_histogram(aes(x=EstimatedReturn), alpha=0.2, color="steelblue", fill="white")+
     geom_histogram(aes(x=EstimatedLoss),  alpha=0.2, color="steelblue", fill="steelblue")+
-    theme(aspect.ratio = 1/1)
-    
+    theme(aspect.ratio = 1/1)    
 ```
 
 
@@ -475,11 +472,9 @@ A strong negative correlation between EstimatedLoss and ProsperRating. Best pros
 Q: Does the loan Term influence the BorrowerRate, let's see.
   	
 ```{r echo=FALSE}
-
 ggplot(aes(x=factor(Term/12), y=BorrowerRate), data = loan)+
   geom_boxplot(na.rm=T,color="steelblue", fill="white")+
   theme(aspect.ratio = 1/1)
-
 ```
 
 What I thought that where the years Term increase the BorrowerRate increase too, like a traditional bank does. This is not what is shown in the box plot. It's true that BorrowerRate median increase according to number of years in the Term, howeever three years Term has the larger box and range and has some ouliers. As we saw in univariate section, the number of 3 years term loans is the largest. what I think this term is the goal of this business. 
